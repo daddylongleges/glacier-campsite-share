@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Glacier NP Campsite Share — CDT Hikers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;500;600&display=swap" rel="stylesheet">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { background: #1e2b1e; font-family: 'Source Sans 3', sans-serif; color: #e8ede3; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SUPA_URL = 'https://lvmtboajwjyhmsphjwix.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2bXRib2Fqd2p5aG1zcGhqd2l4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU0NTE2MjIsImV4cCI6MjA5MTAyNzYyMn0.d1eLbKXSxe3c4sW093Q7ndk1C2DKBcQDT4xoTLw2wTE';
+const db = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+const {useState, useEffect} = React;
+const E = React.createElement;
+
+const gold='#c8a84b', bg='#1e2b1e', dark='#111a11', card='#253225', inp='#162016';
+const muted='#9ab88a', faint='#7a8f72';
+const sans="'Source Sans 3',sans-serif", mono="'IBM Plex Mono',monospace", serif="'Playfair Display',serif";
+
+function fd(d){const p=d.split('-');return p[1]+'/'+p[2]+'/'+p[0]}
+
+// localStorage helpers for persisting interested clicks
+const LS_KEY = 'glacier_interests';
+const LS_CLAIMS_KEY = 'glacier_claims';
+function getStoredClaims(){
+  try { return JSON.parse(localStorage.getItem(LS_CLAIMS_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+function saveClaim(listingId, claimerId){
+  try { var s=getStoredClaims(); s[listingId]=claimerId; localStorage.setItem(LS_CLAIMS_KEY,JSON.stringify(s)); } catch(e){}
+}
+function removeSavedClaim(listingId){
+  try { var s=getStoredClaims(); delete s[listingId]; localStorage.setItem(LS_CLAIMS_KEY,JSON.stringify(s)); } catch(e){}
+}
+function getStoredInterests(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY)||'{}'); }
+  catch(e){ return {}; }
+}
+function saveInterest(id){
+  try {
+    const stored = getStoredInterests();
+    stored[id] = true;
+    localStorage.setItem(LS_KEY, JSON.stringify(stored));
+  } catch(e){}
+}
+function removeStoredInterest(id){
+  try {
+    const stored = getStoredInterests();
+    delete stored[id];
+    localStorage.setItem(LS_KEY, JSON.stringify(stored));
+  } catch(e){}
+}
+
+const SITES=[
+  {code:"ADA",name:"Adair"},{code:"AKO",name:"Akokala Lake"},{code:"ARR",name:"Arrow Lake"},{code:"ATL",name:"Atlantic Creek"},{code:"BEA",name:"Beaver Woman Lake"},{code:"BOU",name:"Boulder Pass"},{code:"BOW",name:"Bowman Lake Head"},{code:"BRO",name:"Brown Pass"},{code:"CAM",name:"Camas Lake"},{code:"COA",name:"Coal Creek"},{code:"COB",name:"Cobalt Lake"},{code:"COS",name:"Cosley Lake"},{code:"CRA",name:"Cracker Lake"},{code:"ELF",name:"Elizabeth Lake Foot"},{code:"ELH",name:"Elizabeth Lake Head"},{code:"ELL",name:"Lake Ellen Wilson"},{code:"FIF",name:"Fifty Mountain"},{code:"FLA",name:"Flattop"},{code:"FRA",name:"Lake Francis"},{code:"GAB",name:"Gable Creek"},{code:"GLF",name:"Glenns Lake Foot"},{code:"GLH",name:"Glenns Lake Head"},{code:"GOA",name:"Goat Haunt Shelters"},{code:"GRA",name:"Grace Lake"},{code:"GRN",name:"Granite Park"},{code:"GUN",name:"Gunsight Lake"},{code:"HAR",name:"Harrison Lake"},{code:"HAW",name:"Hawksbill"},{code:"HEL",name:"Helen Lake"},{code:"HOL",name:"Hole in the Wall"},{code:"ISA",name:"Lake Isabel"},{code:"JAN",name:"Lake Janet"},{code:"KIN",name:"Kintla Lake Head"},{code:"KOO",name:"Kootenai Lake"},{code:"LIN",name:"Lincoln Lake"},{code:"LNY",name:"Lower Nyack"},{code:"LOF",name:"Logging Lake Foot"},{code:"LQU",name:"Lower Quartz Lake"},{code:"MAN",name:"Many Glacier CG"},{code:"MCD",name:"McDonald Lake"},{code:"MOJ",name:"Mokowanis Junction"},{code:"MOL",name:"Mokowanis Lake"},{code:"MOR",name:"Morning Star Lake"},{code:"NON",name:"No Name Lake"},{code:"OLD",name:"Oldman Lake"},{code:"OLC",name:"Ole Creek"},{code:"OLL",name:"Ole Lake"},{code:"OTO",name:"Otokomi Lake"},{code:"PAR",name:"Park Creek"},{code:"POI",name:"Poia Lake"},{code:"QUA",name:"Quartz Lake"},{code:"REF",name:"Red Eagle Lake Foot"},{code:"REH",name:"Red Eagle Lake Head"},{code:"REY",name:"Reynolds Creek"},{code:"ROU",name:"Round Prairie"},{code:"SLI",name:"Slide Lake"},{code:"SNY",name:"Snyder Lake"},{code:"SPE",name:"Sperry"},{code:"STO",name:"Stoney Indian Lake"},{code:"TMC",name:"Two Medicine CG"},{code:"UPK",name:"Upper Kintla Lake"},{code:"UPN",name:"Upper Nyack"},{code:"UPP",name:"Upper Park Creek"},{code:"UPT",name:"Upper Two Medicine Lake"},{code:"WAT",name:"Waterton River"}
+];
+
+const IS={fontFamily:sans,fontSize:13.5,padding:'8px 11px',border:'1px solid rgba(200,168,75,0.25)',borderRadius:7,background:inp,color:'#e8ede3',outline:'none',width:'100%'};
+
+async function fetchListings(){
+  // Use MST (UTC-7 MDT / UTC-6 MST) — expire listings at 5pm MST same day
+  var now = new Date();
+  // MST is UTC-7 during MDT (Mar-Nov), UTC-7 standard. Use fixed UTC-6 for MST standard, but
+  // Glacier is in MDT (UTC-6) in summer season. We use UTC-6 (MDT) as the park offset.
+  var mstOffset = 6 * 60; // MDT = UTC-6
+  var mst = new Date(now.getTime() - mstOffset * 60 * 1000);
+  var mstHour = mst.getUTCHours();
+  var mstMinute = mst.getUTCMinutes();
+  var mstDateStr = mst.toISOString().split('T')[0];
+  // After 5pm MST, treat today as expired — use tomorrow as the floor
+  var cutoffDate;
+  if(mstHour >= 17){
+    var next = new Date(mst);
+    next.setUTCDate(next.getUTCDate() + 1);
+    cutoffDate = next.toISOString().split('T')[0];
+  } else {
+    cutoffDate = mstDateStr;
+  }
+  const {data:listings,error} = await db.from('listings').select('*, claimers(*)').gte('date',cutoffDate).order('name').order('date');
+  if(error){console.error(error);return [];}
+  return listings.map(l=>({...l,claimers:l.claimers||[]}));
+}
+
+async function fetchStats(){
+  var res = await db.from('listings').select('permit, claimers(trail, real)');
+  if(res.error || !res.data) return {permitsShared:0,campsitesShared:0,hikersHelped:0};
+  var data = res.data;
+  var posterKeys = {};
+  data.forEach(function(l){ var k=(l.permit||'').toLowerCase().trim(); if(k) posterKeys[k]=1; });
+  var campsitesShared = data.filter(function(l){ return l.claimers && l.claimers.length > 0; }).length;
+  var claimerKeys = {};
+  data.forEach(function(l){
+    (l.claimers||[]).forEach(function(c){
+      var k=(c.trail||'').toLowerCase().trim()+'|'+(c.real||'').toLowerCase().trim();
+      claimerKeys[k]=1;
+    });
+  });
+  return {permitsShared:Object.keys(posterKeys).length, campsitesShared:campsitesShared, hikersHelped:Object.keys(claimerKeys).length};
+}
+
+function Gate({onEnter}){
+  const [checked,setChecked]=useState(false);
+  const [err,setErr]=useState(false);
+  return E('div',{style:{position:'fixed',inset:0,background:dark,zIndex:9999,display:'flex',alignItems:'center',justifyContent:'center',padding:'2rem 1rem',overflowY:'auto'}},
+    E('div',{style:{maxWidth:560,width:'100%',textAlign:'center'}},
+      E('div',{style:{display:'inline-block',background:gold,color:'#1a1000',fontFamily:mono,fontSize:10,fontWeight:500,letterSpacing:'.12em',padding:'3px 10px',borderRadius:2,marginBottom:'1.2rem',textTransform:'uppercase'}},'Glacier NP · Campsite Share'),
+      E('h1',{style:{fontFamily:serif,fontSize:'clamp(1.4rem,4vw,2rem)',color:'#f0ead8',fontWeight:600,lineHeight:1.2,marginBottom:'1.5rem'}},'Permit sharing coordination for',E('br',null),E('span',{style:{color:gold}},'CDT hikers')),
+      E('div',{style:{background:'rgba(200,168,75,0.07)',border:'1px solid rgba(200,168,75,0.3)',borderRadius:10,padding:'1.2rem 1.4rem',marginBottom:'1.5rem',textAlign:'left'}},
+        E('p',{style:{fontSize:13.5,color:'#e8ede3',lineHeight:1.8}},'This website does ',E('strong',{style:{color:gold}},'NOT ISSUE PERMITS'),' — it is a coordination tool only. You still need to visit a backcountry permit office to be officially added to someone\'s permit.'),
+        E('p',{style:{fontSize:13.5,color:'#e8ede3',lineHeight:1.8,marginTop:'.8rem'}},'While at the office, please be patient and cordial with the rangers. They are doing their best to build thru hiker itineraries on software that was not designed for it.')
+      ),
+      E('div',{style:{display:'flex',alignItems:'flex-start',gap:14,background:checked?'#2e3e1e':'#2a3a2a',border:`2px solid ${checked?gold:'rgba(200,168,75,0.3)'}`,borderRadius:8,padding:'.9rem 1rem',marginBottom:'1.2rem',cursor:'pointer',textAlign:'left',userSelect:'none'},onClick:()=>{setChecked(c=>!c);setErr(false);}},
+        E('div',{style:{width:22,height:22,flexShrink:0,marginTop:1,borderRadius:5,border:`2px solid ${checked?gold:'rgba(200,168,75,0.45)'}`,background:checked?gold:'#162016',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s'}},
+          checked&&E('svg',{width:13,height:13,viewBox:'0 0 14 14',fill:'none',stroke:'#1a1000',strokeWidth:2.5},E('path',{d:'M2 7l3.5 3.5L12 3',strokeLinecap:'round',strokeLinejoin:'round'}))
+        ),
+        E('span',{style:{fontSize:13.5,color:'#e8ede3',lineHeight:1.65,pointerEvents:'none'}},'I understand this site does not issue permits and will be a decent human being towards the rangers who are helping me in the backcountry office.')
+      ),
+      E('div',{style:{fontSize:11.5,color:'#f08080',fontFamily:mono,marginTop:'.5rem',minHeight:'1.4rem'}},err?'Please check the box above to continue':'\u00a0'),
+      E('button',{style:{width:'100%',padding:12,background:checked?gold:'rgba(200,168,75,0.15)',color:checked?'#1a1000':'rgba(200,168,75,0.4)',border:`1px solid ${checked?gold:'rgba(200,168,75,0.2)'}`,borderRadius:8,fontFamily:sans,fontSize:15,fontWeight:500,cursor:checked?'pointer':'not-allowed',transition:'all .2s'},onClick:()=>checked?onEnter():setErr(true)},'Enter the site →')
+    )
+  );
+}
+
+function Header({setPage}){
+  const [navOpen,setNavOpen]=useState(false);
+  const lnk={display:'inline-flex',alignItems:'center',gap:6,background:'rgba(200,168,75,0.15)',border:'1px solid rgba(200,168,75,0.4)',borderRadius:5,padding:'5px 12px',color:gold,fontFamily:mono,fontSize:11,letterSpacing:'.05em',textDecoration:'none'};
+  return E('header',{style:{background:dark,padding:'1.5rem 1.5rem 1.6rem'}},
+    E('div',{style:{maxWidth:900,margin:'0 auto',position:'relative'}},
+      E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}},
+        E('div',{style:{display:'inline-block',background:gold,color:'#1a1000',fontFamily:mono,fontSize:10,fontWeight:500,letterSpacing:'.12em',padding:'3px 10px',borderRadius:2,marginBottom:10,textTransform:'uppercase'}},'Glacier NP · Campsite Share'),
+        E('div',{style:{position:'relative',zIndex:200}},
+          E('div',{style:{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(200,168,75,0.15)',border:'1px solid rgba(200,168,75,0.4)',borderRadius:5,padding:'6px 12px',color:gold,fontFamily:mono,fontSize:11,cursor:'pointer',whiteSpace:'nowrap'},onClick:()=>setNavOpen(o=>!o)},'Menu ',E('span',{style:{fontSize:9,display:'inline-block',transform:navOpen?'rotate(180deg)':'none',transition:'transform .2s'}},'▼')),
+          navOpen&&E('div',{style:{position:'absolute',top:'calc(100% + 8px)',right:0,background:dark,border:'1px solid rgba(200,168,75,0.3)',borderRadius:8,overflow:'hidden',minWidth:200,zIndex:300}},
+            E('button',{style:{width:'100%',display:'block',padding:'.65rem 1rem',background:'none',border:'none',borderBottom:'1px solid rgba(200,168,75,0.1)',cursor:'pointer',color:'rgba(240,234,216,0.75)',fontFamily:mono,fontSize:11,letterSpacing:'.06em',textTransform:'uppercase',textAlign:'left'},onClick:()=>{setPage('about');setNavOpen(false)}},'About'),
+            E('button',{style:{width:'100%',display:'block',padding:'.65rem 1rem',background:'none',border:'none',cursor:'pointer',color:'rgba(240,234,216,0.75)',fontFamily:mono,fontSize:11,letterSpacing:'.06em',textTransform:'uppercase',textAlign:'left'},onClick:()=>{setPage('about');setNavOpen(false)}},'Contact')
+          )
+        )
+      ),
+      E('h1',{style:{fontFamily:serif,fontSize:'clamp(1.3rem,3.5vw,2rem)',color:'#f0ead8',fontWeight:600,lineHeight:1.2}},'Permit sharing coordination for ',E('span',{style:{color:gold}},'CDT hikers')),
+      E('div',{style:{display:'flex',gap:8,marginTop:10,flexWrap:'wrap'}},
+        E('a',{style:lnk,href:'https://www.nps.gov/glac/planyourvisit/how-to-wilderness-permit.htm',target:'_blank'},'Wilderness permit info'),
+        E('a',{style:lnk,href:'https://cdtcoalition.org/northern-terminus/',target:'_blank'},'Northern terminus info'),
+        E('a',{style:lnk,href:'https://www.nps.gov/glac/planyourvisit/upload/Wilderness-Campground-Map-2024_accessible.pdf',target:'_blank'},'Park campsites map')
+      )
+    )
+  );
+}
+
+function ClaimForm({onClaim,onCancel}){
+  const [trail,setTrail]=useState('');
+  const [real,setReal]=useState('');
+  const [agreed,setAgreed]=useState(false);
+  const [err,setErr]=useState(false);
+  const [saving,setSaving]=useState(false);
+  async function submit(){
+    if(!trail.trim()||!real.trim()||!agreed){setErr(true);return;}
+    setSaving(true);
+    await onClaim(trail.trim(),real.trim());
+    setSaving(false);
+  }
+  return E('div',{style:{background:'#1a2a1a',border:'1px solid rgba(200,168,75,0.3)',borderRadius:8,padding:'1rem',marginTop:'.75rem'}},
+    E('p',{style:{fontSize:12.5,color:muted,marginBottom:'.75rem',lineHeight:1.5}},"Enter your info to mark this spot as claimed. Use this once you've been officially added at the backcountry office."),
+    E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:'.75rem'}},
+      E('div',null,E('div',{style:{fontSize:11,fontFamily:mono,color:faint,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},'Your trail name *'),E('input',{style:{...IS,borderColor:err&&!trail.trim()?'#f08080':undefined},value:trail,onChange:e=>{setTrail(e.target.value);setErr(false)},placeholder:'e.g. Stumbles'})),
+      E('div',null,E('div',{style:{fontSize:11,fontFamily:mono,color:faint,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}},'Your real name *'),E('input',{style:{...IS,borderColor:err&&!real.trim()?'#f08080':undefined},value:real,onChange:e=>{setReal(e.target.value);setErr(false)},placeholder:'e.g. Jamie Torres'}))
+    ),
+    E('div',{
+      style:{display:'flex',alignItems:'flex-start',gap:12,background:agreed?'#1e321e':'#162016',border:`1.5px solid ${err&&!agreed?'#f08080':agreed?gold:'rgba(200,168,75,0.25)'}`,borderRadius:7,padding:'.75rem .9rem',marginBottom:'.75rem',cursor:'pointer',userSelect:'none',transition:'all .2s'},
+      onClick:()=>{setAgreed(a=>!a);setErr(false);}
+    },
+      E('div',{style:{width:20,height:20,flexShrink:0,marginTop:1,borderRadius:4,border:`2px solid ${agreed?gold:'rgba(200,168,75,0.4)'}`,background:agreed?gold:'#162016',display:'flex',alignItems:'center',justifyContent:'center',transition:'all .2s',pointerEvents:'none'}},
+        agreed&&E('svg',{width:12,height:12,viewBox:'0 0 14 14',fill:'none',stroke:'#1a1000',strokeWidth:2.5},E('path',{d:'M2 7l3.5 3.5L12 3',strokeLinecap:'round',strokeLinejoin:'round'}))
+      ),
+      E('span',{style:{fontSize:12.5,color:'#e8ede3',lineHeight:1.6,pointerEvents:'none'}},'Upon claiming this spot, I agree that I already have an official, park-issued permit reflecting I\'m staying at this campsite.')
+    ),
+    err&&(!trail.trim()||!real.trim()||!agreed)&&E('p',{style:{fontSize:11.5,color:'#f08080',fontFamily:mono,marginBottom:'.6rem'}},!agreed?'You must agree to the above before claiming.':'Both name fields are required.'),
+    E('div',{style:{display:'flex',gap:8}},
+      E('button',{style:{background:gold,color:'#1a1000',border:'none',borderRadius:6,padding:'8px 18px',fontFamily:sans,fontSize:13,fontWeight:600,cursor:saving?'not-allowed':'pointer',opacity:saving?0.6:1},onClick:submit},saving?'Saving…':'Confirm →'),
+      E('button',{style:{background:'none',border:'1px solid rgba(200,168,75,0.3)',borderRadius:6,padding:'7px 14px',fontFamily:sans,fontSize:13,color:muted,cursor:'pointer'},onClick:onCancel},'Cancel')
+    )
+  );
+}
+
+function Card({s,onClaim,onUnclaim,onInterest,onUninterest,myClaimId,myInterest}){
+  const [showForm,setShowForm]=useState(false);
+  const full=s.spots===0;
+  const iClaimed=myClaimId!=null;
+  const ml={display:'block',color:faint,fontSize:10.5,fontFamily:mono,letterSpacing:'.05em',marginBottom:1,textTransform:'uppercase'};
+  return E('div',{style:{background:card,border:'1px solid rgba(200,168,75,0.2)',borderRadius:10,padding:'.9rem 1rem',marginBottom:'.65rem'}},
+    E('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}},
+      E('div',{style:{minWidth:0,flex:1}},
+        E('div',{style:{fontFamily:mono,fontSize:'1.1rem',fontWeight:500,color:'#f0ead8',wordBreak:'break-word'}},s.code+' — '+s.name),
+        E('div',{style:{fontFamily:mono,fontSize:'1.1rem',fontWeight:500,color:gold,marginTop:2}},fd(s.date))
+      ),
+      E('div',{style:{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:5,flexShrink:0,marginLeft:8}},
+        E('span',{style:{background:full?'rgba(200,70,70,0.2)':'rgba(90,160,70,0.2)',color:full?'#f08080':'#8fd870',fontFamily:mono,fontSize:11,fontWeight:500,padding:'3px 8px',borderRadius:4,border:`1px solid ${full?'rgba(200,70,70,0.3)':'rgba(90,160,70,0.3)'}`,whiteSpace:'nowrap'}},s.spots+' of '+s.tot+' open'),
+        s.interested>0&&E('span',{style:{background:'rgba(200,168,75,0.1)',border:'1px solid rgba(200,168,75,0.2)',borderRadius:4,padding:'2px 8px',fontSize:11,color:gold,fontFamily:mono,whiteSpace:'nowrap'}},s.interested+' interested')
+      )
+    ),
+    E('div',{style:{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'4px 14px',marginTop:'.65rem',fontSize:12.5}},
+      E('div',null,E('span',{style:ml},'Permit #'),E('span',{style:{color:'#e8ede3'}},s.permit)),
+      E('div',null,E('span',{style:ml},'Trail name'),E('span',{style:{color:'#e8ede3'}},s.trail)),
+      E('div',null,E('span',{style:ml},'Real name'),E('span',{style:{color:'#e8ede3'}},s.real)),
+      E('div',null,E('span',{style:ml},'Contact'),E('span',{style:{color:s.contact?gold:faint,fontStyle:s.contact?'normal':'italic'}},s.contact||'None provided')),
+      s.notes&&E('div',{style:{gridColumn:'1/-1'}},E('span',{style:ml},'Notes'),E('span',{style:{color:'#e8ede3',fontWeight:400}},s.notes)),
+      s.claimers&&s.claimers.length>0&&E('div',{style:{gridColumn:'1/-1'}},
+        E('span',{style:ml},'Sharing with'),
+        E('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginTop:2}},
+          s.claimers.map((c,i)=>E('span',{key:i,style:{background:'rgba(90,160,70,0.15)',border:'1px solid rgba(90,160,70,0.25)',borderRadius:4,padding:'2px 8px',fontSize:11.5,color:'#8fd870',fontFamily:mono}},c.trail))
+        )
+      )
+    ),
+    E('div',{style:{marginTop:'.7rem',paddingTop:'.6rem',borderTop:'1px solid rgba(200,168,75,0.12)',display:'flex',justifyContent:'flex-end',gap:8,alignItems:'center',flexWrap:'wrap'}},
+      !iClaimed&&E('button',{
+        style:{background:myInterest?'rgba(200,168,75,0.15)':'none',border:`1.5px solid ${myInterest?gold:'rgba(200,168,75,0.4)'}`,borderRadius:6,padding:'6px 13px',fontFamily:sans,fontSize:12.5,color:gold,cursor:'pointer'},
+        onClick:()=>myInterest?onUninterest(s.id):onInterest(s.id)
+      },myInterest?'Interested ✓ (undo)':'Interested?'),
+      iClaimed
+        ?E('button',{style:{background:'none',border:'1px solid rgba(240,128,128,0.4)',borderRadius:6,padding:'5px 12px',fontFamily:sans,fontSize:12,color:'#f08080',cursor:'pointer'},onClick:()=>onUnclaim(s.id,myClaimId,s.tot)},'Remove my claim')
+        :!full&&!showForm&&E('button',{style:{background:gold,color:'#1a1000',border:'none',borderRadius:6,padding:'6px 14px',fontFamily:sans,fontSize:12.5,fontWeight:600,cursor:'pointer'},onClick:()=>setShowForm(true)},'Claim'),
+      full&&!iClaimed&&E('span',{style:{fontSize:11.5,color:'#f08080',fontFamily:mono}},'No spots left')
+    ),
+    showForm&&!full&&E(ClaimForm,{onClaim:async(trail,real)=>{await onClaim(s.id,trail,real);setShowForm(false);},onCancel:()=>setShowForm(false)})
+  );
+}
+
+function Browse({listings,loading,onClaim,onUnclaim,onInterest,onUninterest,myClaims,myInterests}){
+  const [search,setSearch]=useState('');
+  const [dateF,setDateF]=useState('');
+  const shown=(listings||[])
+    .filter(s=>{const q=search.toLowerCase();return(!q||(s.name+s.code+s.trail+s.real).toLowerCase().includes(q))&&(!dateF||s.date===dateF)})
+    .sort((a,b)=>{const n=a.name.localeCompare(b.name);return n!==0?n:a.date.localeCompare(b.date)});
+  return E('div',null,
+    E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:'.8rem'}},
+      E('input',{style:{...IS,flex:1,minWidth:110},placeholder:'Search campsite or trail name…',value:search,onChange:e=>setSearch(e.target.value)}),
+      E('input',{type:'date',style:{...IS,flex:1,minWidth:110},value:dateF,onChange:e=>setDateF(e.target.value)})
+    ),
+    E('div',{style:{background:'rgba(90,160,70,0.08)',border:'1px solid rgba(90,160,70,0.2)',borderRadius:8,padding:'.7rem 1rem',fontSize:13,color:muted,lineHeight:1.6,marginBottom:'1rem'}},
+      'Vote for your desired sites to gauge demand. Once your permit is issued and in-hand, ',E('strong',{style:{color:'#8fd870'}},'PLEASE claim the associated spot(s)'),' so availability is updated.'
+    ),
+    loading&&E('div',{style:{textAlign:'center',padding:'2.5rem 1rem',color:faint,fontSize:14}},'Loading listings…'),
+    !loading&&shown.length===0&&E('div',{style:{textAlign:'center',padding:'2.5rem 1rem',color:faint,fontSize:14}},
+      (listings||[]).length===0
+        ?E('div',null,E('p',null,'No listings yet.'),E('p',{style:{marginTop:'.5rem',fontSize:12}},'Be the first to share a permit spot!'))
+        :E('p',null,'No spots match those filters.')
+    ),
+    shown.map(s=>E(Card,{key:s.id,s,onClaim,onUnclaim,onInterest,onUninterest,myClaimId:myClaims[s.id]??null,myInterest:!!myInterests[s.id]}))
+  );
+}
+
+function ShareForm({onPost}){
+  const [step,setStep]=useState(0);
+  const [sites,setSites]=useState([{id:1,code:'',date:'',spots:''}]);
+  const [trail,setTrail]=useState('');
+  const [real,setReal]=useState('');
+  const [permit,setPermit]=useState('');
+  const [contact,setContact]=useState('');
+  const [notes,setNotes]=useState('');
+  const [done,setDone]=useState(false);
+  const [saving,setSaving]=useState(false);
+  var now=new Date(); var mstOff=6*60; var mst=new Date(now.getTime()-mstOff*60*1000); var mstHour=mst.getUTCHours(); var mstDate=mst.toISOString().split('T')[0]; var TODAY=mstHour<17?mstDate:(function(){var d=new Date(mst);d.setUTCDate(d.getUTCDate()+1);return d.toISOString().split('T')[0];})();
+  const lbl={fontSize:11,fontFamily:mono,color:faint,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4};
+
+  function post(){
+    setSaving(true);
+    var promises = sites.map(function(r){
+      var site=SITES.find(function(s){return s.code===r.code;});
+      var sp=parseInt(r.spots);
+      return onPost({name:site.name,code:r.code,date:r.date,spots:sp,tot:sp,permit:permit,trail:trail,real:real,contact:contact||'',notes:notes||'',interested:0});
+    });
+    Promise.all(promises).then(function(){setSaving(false);setDone(true);});
+  }
+
+  if(done)return E('div',{style:{textAlign:'center',padding:'2rem 1rem'}},
+    E('div',{style:{fontSize:48,marginBottom:'.5rem'}},'✓'),
+    E('h3',{style:{fontFamily:serif,fontSize:'1.15rem',color:'#f0ead8',marginBottom:'.4rem'}},'Listing posted!'),
+    E('p',{style:{color:muted,fontSize:13,lineHeight:1.6,marginBottom:'1.2rem'}},'Your spot is now live and saved to the database.'),
+    E('button',{style:{background:'none',border:'1px solid rgba(200,168,75,0.3)',borderRadius:7,padding:'8px 18px',fontFamily:sans,fontSize:13,color:muted,cursor:'pointer'},onClick:()=>{setDone(false);setSites([{id:1,code:'',date:'',spots:''}]);setTrail('');setReal('');setPermit('');setContact('');setNotes('');setStep(0);}},'Post another spot')
+  );
+
+  return E('div',{style:{background:'#1a2a1a',border:'1px solid rgba(200,168,75,0.2)',borderRadius:12,overflow:'hidden'}},
+    E('div',{style:{display:'flex',borderBottom:'1px solid rgba(200,168,75,0.15)'}},
+      ['Campsites','Your info','Review'].map((l,i)=>E('div',{key:i,style:{flex:1,padding:'.7rem .5rem',background:step===i?'rgba(200,168,75,0.06)':'none',borderBottom:`2px solid ${step===i?gold:'transparent'}`,display:'flex',alignItems:'center',justifyContent:'center',gap:6,fontFamily:mono,fontSize:11,letterSpacing:'.06em',color:step===i?gold:step>i?'#8fd870':faint,textTransform:'uppercase'}},
+        E('span',{style:{width:18,height:18,borderRadius:'50%',background:step===i?gold:step>i?'#5a9a40':'rgba(255,255,255,0.08)',color:step===i?'#1a1000':step>i?'white':'#9ab88a',fontSize:10,display:'inline-flex',alignItems:'center',justifyContent:'center',flexShrink:0}},step>i?'✓':(i+1)),l
+      ))
+    ),
+    E('div',{style:{padding:'1.3rem'}},
+      step===0&&E('div',null,
+        E('h3',{style:{fontFamily:serif,fontSize:'1rem',color:'#f0ead8',marginBottom:'.2rem'}},'Campsite details'),
+        E('p',{style:{color:muted,fontSize:12.5,marginBottom:'1.1rem',lineHeight:1.5}},'Add each campsite on your permit.'),
+        sites.map(r=>E('div',{key:r.id,style:{background:inp,border:'1px solid rgba(200,168,75,0.18)',borderRadius:8,padding:'.8rem .9rem',marginBottom:'.6rem'}},
+          E('div',{style:{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr',gap:8}},
+            E('div',null,E('div',{style:lbl},'Campground *'),E('select',{style:{...IS},value:r.code,onChange:e=>{const v=e.target.value;setSites(p=>p.map(x=>x.id===r.id?{...x,code:v}:x))}},E('option',{value:''},'Select…'),SITES.map(s=>E('option',{key:s.code,value:s.code},s.name)))),
+            E('div',null,E('div',{style:lbl},'Code'),E('input',{style:{...IS,background:'rgba(200,168,75,0.08)',color:gold,fontFamily:mono},value:r.code,readOnly:true,placeholder:'Auto'})),
+            E('div',null,E('div',{style:lbl},'Date *'),E('input',{type:'date',style:{...IS},value:r.date,onChange:e=>{const v=e.target.value;setSites(p=>p.map(x=>x.id===r.id?{...x,date:v}:x))}})),
+            E('div',null,E('div',{style:lbl},'Spots *'),E('select',{style:{...IS},value:r.spots,onChange:e=>{const v=e.target.value;setSites(p=>p.map(x=>x.id===r.id?{...x,spots:v}:x))}},E('option',{value:''},'—'),E('option',{value:'1'},'1'),E('option',{value:'2'},'2'),E('option',{value:'3'},'3')))
+          ),
+          sites.length>1&&E('button',{style:{marginTop:8,background:'none',border:'none',cursor:'pointer',color:'#f08080',fontSize:12,fontFamily:sans},onClick:()=>setSites(p=>p.filter(x=>x.id!==r.id))},'Remove')
+        )),
+        E('button',{style:{display:'inline-flex',alignItems:'center',gap:6,background:'none',border:'1px dashed rgba(200,168,75,0.35)',borderRadius:7,padding:'8px 16px',fontFamily:sans,fontSize:13,color:muted,cursor:'pointer',marginTop:'.4rem'},onClick:()=>setSites(p=>[...p,{id:Date.now(),code:'',date:'',spots:''}])},'+ Add another campsite'),
+        E('div',{style:{display:'flex',justifyContent:'flex-end',marginTop:'1.2rem'}},
+          E('button',{style:{background:gold,color:'#1a1000',border:'none',borderRadius:7,padding:'9px 22px',fontFamily:sans,fontSize:13.5,fontWeight:500,cursor:'pointer'},onClick:()=>{if(sites.every(r=>r.code&&r.date&&r.spots&&r.date>=TODAY))setStep(1);}},'Continue →')
+        )
+      ),
+      step===1&&E('div',null,
+        E('h3',{style:{fontFamily:serif,fontSize:'1rem',color:'#f0ead8',marginBottom:'.2rem'}},'Your hiker info'),
+        E('p',{style:{color:muted,fontSize:12.5,marginBottom:'1.1rem',lineHeight:1.5}},'Trail name, real name, and permit number are required.'),
+        E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}},
+          E('div',null,E('div',{style:lbl},'Trail name *'),E('input',{style:IS,value:trail,onChange:e=>setTrail(e.target.value),placeholder:'e.g. Stumbles'})),
+          E('div',null,E('div',{style:lbl},'Real name *'),E('input',{style:IS,value:real,onChange:e=>setReal(e.target.value),placeholder:'e.g. Jamie Torres'})),
+          E('div',null,E('div',{style:lbl},'Permit number *'),E('input',{style:IS,value:permit,onChange:e=>setPermit(e.target.value),placeholder:'GNP-XXXX-XXXX'})),
+          E('div',null,E('div',{style:lbl},'Contact (optional)'),E('input',{style:IS,value:contact,onChange:e=>setContact(e.target.value),placeholder:'@handle or phone'})),
+          E('div',{style:{gridColumn:'1/-1'}},E('div',{style:lbl},'Notes (optional)'),E('textarea',{style:{...IS,minHeight:56,resize:'vertical'},value:notes,onChange:e=>setNotes(e.target.value)}))
+        ),
+        E('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'1.2rem'}},
+          E('button',{style:{background:'none',border:'1px solid rgba(200,168,75,0.3)',borderRadius:7,padding:'9px 18px',fontFamily:sans,fontSize:13.5,color:muted,cursor:'pointer'},onClick:()=>setStep(0)},'← Back'),
+          E('button',{style:{background:gold,color:'#1a1000',border:'none',borderRadius:7,padding:'9px 22px',fontFamily:sans,fontSize:13.5,fontWeight:500,cursor:'pointer'},onClick:()=>{if(trail.trim()&&real.trim()&&permit.trim())setStep(2);}},'Review →')
+        )
+      ),
+      step===2&&E('div',null,
+        E('h3',{style:{fontFamily:serif,fontSize:'1rem',color:'#f0ead8',marginBottom:'.2rem'}},'Review your listing'),
+        E('p',{style:{color:muted,fontSize:12.5,marginBottom:'1.1rem',lineHeight:1.5}},'Everything look right? Goes live instantly.'),
+        E('div',{style:{background:'rgba(200,168,75,0.07)',border:'1px solid rgba(200,168,75,0.25)',borderRadius:8,padding:'1rem 1.2rem',marginBottom:'1.2rem',textAlign:'center'}},
+          E('p',{style:{fontSize:13,color:'#e8ede3',lineHeight:1.75,maxWidth:560,margin:'0 auto'}},"By posting this listing, you are agreeing that anyone who accesses this site may join your campsite. Given the limited cell service in the backcountry, it is not expected that someone can notify you that they're joining your permit. Your spot is being offered in good faith because you're a wonderful human being. If you don't feel comfortable with the luck of the draw, reconsider whether posting your campsite here fits your needs.")
+        ),
+        sites.map((r,i)=>{const site=SITES.find(s=>s.code===r.code);return E('div',{key:i,style:{background:inp,border:'1px solid rgba(200,168,75,0.12)',borderRadius:7,padding:'.65rem .85rem',marginBottom:'.5rem'}},
+          E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'6px 16px'}},
+            E('div',null,E('div',{style:{fontSize:10.5,fontFamily:mono,color:faint,textTransform:'uppercase',marginBottom:1}},'Campground'),E('div',{style:{color:'#f0ead8',fontSize:13,fontWeight:500}},site?site.name:'')),
+            E('div',null,E('div',{style:{fontSize:10.5,fontFamily:mono,color:faint,textTransform:'uppercase',marginBottom:1}},'Date'),E('div',{style:{color:'#f0ead8',fontSize:13,fontWeight:500}},r.date?fd(r.date):'')),
+            E('div',null,E('div',{style:{fontSize:10.5,fontFamily:mono,color:faint,textTransform:'uppercase',marginBottom:1}},'Spots'),E('div',{style:{color:'#f0ead8',fontSize:13,fontWeight:500}},r.spots))
+          )
+        )}),
+        E('div',{style:{height:1,background:'rgba(200,168,75,0.15)',margin:'.9rem 0'}}),
+        E('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'6px 16px'}},
+          [['Trail name',trail],['Real name',real],['Permit #',permit],contact?['Contact',contact]:null,notes?['Notes',notes]:null].filter(Boolean).map(([l2,v])=>
+            E('div',{key:l2,style:{gridColumn:l2==='Notes'?'1/-1':undefined}},E('div',{style:{fontSize:10.5,fontFamily:mono,color:faint,textTransform:'uppercase',marginBottom:1}},l2),E('div',{style:{color:'#f0ead8',fontSize:13,fontWeight:500}},v))
+          )
+        ),
+        E('div',{style:{display:'flex',justifyContent:'space-between',marginTop:'1.2rem'}},
+          E('button',{style:{background:'none',border:'1px solid rgba(200,168,75,0.3)',borderRadius:7,padding:'9px 18px',fontFamily:sans,fontSize:13.5,color:muted,cursor:'pointer'},onClick:()=>setStep(1)},'← Edit'),
+          E('button',{style:{background:gold,color:'#1a1000',border:'none',borderRadius:7,padding:'9px 22px',fontFamily:sans,fontSize:13.5,fontWeight:500,cursor:saving?'not-allowed':'pointer',opacity:saving?0.6:1},onClick:post},saving?'Posting…':'Post listing →')
+        )
+      )
+    )
+  );
+}
+
+function About(){
+  const p={fontSize:14,lineHeight:1.85,color:'#e8ede3',marginBottom:'1rem'};
+  const dv={height:1,background:'rgba(200,168,75,0.15)',margin:'1rem 0'};
+  return E('div',{style:{background:'#1a2a1a',border:'1px solid rgba(200,168,75,0.2)',borderRadius:12,padding:'1.5rem',maxWidth:660,margin:'0 auto'}},
+    E('p',{style:p},"Ah yes, it's time to go through Glacier, aka, time for more backcountry permit shenanigans!"),
+    E('p',{style:p},"If you're going NOBO, I can say the process in Glacier is a bit more collaborative than Yellowstone because the permitting office hodgepodges whatever route you fancy — yay!"),
+    E('p',{style:p},'Each campsite has a certain number of spots. Each reservation for a spot has a capacity for 4 people.'),
+    E('div',{style:dv}),
+    E('p',{style:p},'In 2025, I, a solo NOBO hiker (Daddy Long Legs) managed to get a very leisurely, 6 night permit through the park, even managing to snag the last available spot at Fifty Mountains for an entire week out. Great for me, but a bummer that 3 spots at EACH campsite was going to go to waste.'),
+    E('p',{style:p},"In efforts to share my wealth, I wrote my permit details and dates on a piece of paper I left at Looking Glass Basecamp with an open invitation to anyone who wanted to share some/all of my permit. In the end, my permit helped 7 people link their way through the park. Hikers together strong."),
+    E('div',{style:dv}),
+    E('p',{style:p},'So here we are, this website inspired by a paper invite written on a torn out piece of notebook paper.'),
+    E('p',{style:{...p,fontFamily:serif,color:gold,fontStyle:'italic',marginBottom:'1.2rem'}},'Happy hiking!'),
+    E('div',{style:dv}),
+    E('div',{style:{display:'flex',alignItems:'center',gap:10}},
+      E('span',{style:{fontSize:12.5,color:muted}},'Questions or feedback?'),
+      E('a',{href:'https://www.instagram.com/wryno',target:'_blank',style:{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(200,168,75,0.12)',border:'1px solid rgba(200,168,75,0.3)',borderRadius:6,padding:'6px 14px',color:gold,fontFamily:mono,fontSize:11.5,textDecoration:'none'}},'@wryno')
+    )
+  );
+}
+
+function App(){
+  const [entered,setEntered]=useState(false);
+  const [page,setPage]=useState('browse');
+  const [listings,setListings]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [myClaims,setMyClaims]=useState(()=>getStoredClaims());
+  // initialise from localStorage so interest persists across refreshes
+  const [myInterests,setMyInterests]=useState(()=>getStoredInterests());
+  const [stats,setStats]=useState(null);
+
+  useEffect(function(){
+    fetchStats().then(function(s){setStats(s);});
+  },[]);
+
+  function refreshStats(){
+    fetchStats().then(function(s){setStats(s);});
+  }
+
+  useEffect(()=>{
+    if(!entered)return;
+    setLoading(true);
+    fetchListings().then(data=>{setListings(data);setLoading(false);});
+  },[entered]);
+
+  useEffect(()=>{
+    if(!entered||page!=='browse')return;
+    fetchListings().then(data=>setListings(data));
+  },[page]);
+
+  async function handleClaim(id,trail,real){
+    const {data:claimer,error}=await db.from('claimers').insert([{listing_id:id,trail,real}]).select().single();
+    if(error){console.error(error);return;}
+    const listing=listings.find(s=>s.id===id);
+    if(listing) await db.from('listings').update({spots:Math.max(0,listing.spots-1)}).eq('id',id);
+    saveClaim(id, claimer.id);
+    setMyClaims(p=>({...p,[id]:claimer.id}));refreshStats();
+    fetchListings().then(data=>setListings(data));
+  }
+
+  async function handleUnclaim(id,claimerId,tot){
+    await db.from('claimers').delete().eq('id',claimerId);
+    const listing=listings.find(s=>s.id===id);
+    if(listing) await db.from('listings').update({spots:Math.min(tot,listing.spots+1)}).eq('id',id);
+    removeSavedClaim(id);
+    setMyClaims(p=>{const n={...p};delete n[id];return n;});refreshStats();
+    fetchListings().then(data=>setListings(data));
+  }
+
+  async function handleInterest(id){
+    if(myInterests[id])return;
+    const listing=listings.find(s=>s.id===id);
+    if(!listing)return;
+    await db.from('listings').update({interested:listing.interested+1}).eq('id',id);
+    // save to localStorage so it persists after refresh
+    saveInterest(id);
+    setMyInterests(p=>({...p,[id]:true}));
+    setListings(p=>p.map(s=>s.id!==id?s:{...s,interested:s.interested+1}));
+  }
+
+  async function handleUninterest(id){
+    if(!myInterests[id])return;
+    const listing=listings.find(s=>s.id===id);
+    if(!listing)return;
+    await db.from('listings').update({interested:Math.max(0,listing.interested-1)}).eq('id',id);
+    removeStoredInterest(id);
+    setMyInterests(p=>{const n={...p};delete n[id];return n;});
+    setListings(p=>p.map(s=>s.id!==id?s:{...s,interested:Math.max(0,s.interested-1)}));
+  }
+
+  async function handlePost(row){
+    const {data,error}=await db.from('listings').insert([row]).select('*, claimers(*)').single();
+    if(error){console.error(error);return;}
+    setListings(p=>[{...data,claimers:[]},...p]);
+    setPage('browse');refreshStats();
+  }
+
+  const tabBtn=(label,pg)=>E('button',{
+    style:{flex:1,padding:'8px 10px',background:page===pg?gold:'none',border:'none',borderRadius:6,fontFamily:sans,fontSize:13,fontWeight:500,color:page===pg?'#1a1000':'#9ab88a',cursor:'pointer',transition:'all .2s'},
+    onClick:()=>setPage(pg)
+  },label);
+
+  return E('div',{style:{background:bg,minHeight:'100vh',fontFamily:sans,color:'#e8ede3'}},
+    !entered&&E(Gate,{onEnter:()=>setEntered(true)}),
+    E(Header,{setPage}),
+    E('div',{style:{maxWidth:900,margin:'0 auto',padding:'1.2rem 1rem'}},
+      E('div',{style:{display:'flex',gap:4,marginBottom:'1.2rem',background:'rgba(0,0,0,0.25)',borderRadius:8,padding:4}},
+        tabBtn('Browse open spots','browse'),
+        tabBtn('Share my permit','share')
+      ),
+      page==='browse'&&E(Browse,{listings,loading,onClaim:handleClaim,onUnclaim:handleUnclaim,onInterest:handleInterest,onUninterest:handleUninterest,myClaims,myInterests}),
+      page==='share'&&E(ShareForm,{onPost:handlePost}),
+      page==='about'&&E(About)
+    ),
+    E(StatsFooter,{stats:stats})
+  );
+}
+
+
+function StatsFooter({stats}){
+  var items = [
+    {label:'Permits shared', value:stats ? stats.permitsShared : '—'},
+    {label:'Campsites shared', value:stats ? stats.campsitesShared : '—'},
+    {label:'Hikers helped', value:stats ? stats.hikersHelped : '—'},
+  ];
+  return E('div',{style:{borderTop:'1px solid rgba(200,168,75,0.15)',marginTop:'2rem',paddingTop:'1.5rem',paddingBottom:'2rem'}},
+    E('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:16,maxWidth:560,margin:'0 auto',textAlign:'center'}},
+      items.map(function(item){
+        return E('div',{key:item.label},
+          E('div',{style:{fontFamily:"'IBM Plex Mono',monospace",fontSize:'clamp(1.6rem,4vw,2.2rem)',fontWeight:500,color:'#c8a84b',lineHeight:1}},item.value),
+          E('div',{style:{fontSize:11,fontFamily:"'IBM Plex Mono',monospace",letterSpacing:'.08em',textTransform:'uppercase',color:'#7a8f72',marginTop:6}},item.label)
+        );
+      })
+    )
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(E(App));
+</script>
+</body>
+</html>
