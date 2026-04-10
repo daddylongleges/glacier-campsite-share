@@ -233,11 +233,8 @@ function Card({s,onClaim,onUnclaim,onInterest,onUninterest,myClaimId,myInterest}
 }
 
 function Browse({listings,loading,onClaim,onUnclaim,onInterest,onUninterest,myClaims,myInterests}){
-  const [search,setSearch]=useState('');
-  const [dateF,setDateF]=useState('');
   const [sortBy,setSortBy]=useState('alpha');
   const shown=(listings||[])
-    .filter(s=>{const q=search.toLowerCase();return(!q||(s.name+s.code+s.trail+s.real).toLowerCase().includes(q))&&(!dateF||s.date===dateF)})
     .sort((a,b)=>{
       if(sortBy==='date') return a.date.localeCompare(b.date)||a.name.localeCompare(b.name);
       return a.name.localeCompare(b.name)||a.date.localeCompare(b.date);
@@ -247,13 +244,9 @@ function Browse({listings,loading,onClaim,onUnclaim,onInterest,onUninterest,myCl
     onClick:()=>setSortBy(val)
   },label);
   return E('div',null,
-    E('div',{style:{display:'flex',gap:8,flexWrap:'wrap',marginBottom:'.8rem'}},
-      E('input',{style:{...IS,flex:1,minWidth:110},placeholder:'Search campsite or trail name…',value:search,onChange:e=>setSearch(e.target.value)}),
-      E('input',{type:'date',style:{...IS,flex:'0 0 auto'},value:dateF,onChange:e=>setDateF(e.target.value)}),
-      E('div',{style:{display:'flex',gap:6,alignItems:'center'}},
-        sortBtn('A–Z','alpha'),
-        sortBtn('By date','date')
-      )
+    E('div',{style:{display:'flex',gap:6,marginBottom:'.8rem'}},
+      sortBtn('A–Z','alpha'),
+      sortBtn('By date','date')
     ),
     E('div',{style:{background:'rgba(90,160,70,0.08)',border:'1px solid rgba(90,160,70,0.2)',borderRadius:8,padding:'.7rem 1rem',fontSize:13,color:muted,lineHeight:1.6,marginBottom:'1rem'}},
       'Vote for your desired sites to gauge demand. Once your permit is issued and in-hand, ',E('strong',{style:{color:'#8fd870'}},'PLEASE claim the associated spot(s)'),' so availability is updated.'
