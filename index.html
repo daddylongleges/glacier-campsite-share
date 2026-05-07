@@ -140,7 +140,7 @@ function Header({setPage}){
           E('div',{style:{display:'inline-flex',alignItems:'center',gap:6,background:'rgba(200,168,75,0.15)',border:'1px solid rgba(200,168,75,0.4)',borderRadius:5,padding:'6px 12px',color:gold,fontFamily:mono,fontSize:11,cursor:'pointer',whiteSpace:'nowrap'},onClick:()=>setNavOpen(o=>!o)},'Menu ',E('span',{style:{fontSize:9,display:'inline-block',transform:navOpen?'rotate(180deg)':'none',transition:'transform .2s'}},'▼')),
           navOpen&&E('div',{style:{position:'absolute',top:'calc(100% + 8px)',right:0,background:dark,border:'1px solid rgba(200,168,75,0.3)',borderRadius:8,overflow:'hidden',minWidth:200,zIndex:300}},
             E('button',{style:{width:'100%',display:'block',padding:'.65rem 1rem',background:'none',border:'none',borderBottom:'1px solid rgba(200,168,75,0.1)',cursor:'pointer',color:'rgba(240,234,216,0.75)',fontFamily:mono,fontSize:11,letterSpacing:'.06em',textTransform:'uppercase',textAlign:'left'},onClick:()=>{setPage('about');setNavOpen(false)}},'About'),
-            E('button',{style:{width:'100%',display:'block',padding:'.65rem 1rem',background:'none',border:'none',cursor:'pointer',color:'rgba(240,234,216,0.75)',fontFamily:mono,fontSize:11,letterSpacing:'.06em',textTransform:'uppercase',textAlign:'left'},onClick:()=>{setPage('about');setNavOpen(false)}},'Contact')
+            E('button',{style:{width:'100%',display:'block',padding:'.65rem 1rem',background:'none',border:'none',cursor:'pointer',color:'rgba(240,234,216,0.75)',fontFamily:mono,fontSize:11,letterSpacing:'.06em',textTransform:'uppercase',textAlign:'left'},onClick:()=>{setPage('faq');setNavOpen(false)}},'FAQ')
           )
         )
       ),
@@ -148,7 +148,8 @@ function Header({setPage}){
       E('div',{style:{display:'flex',gap:8,marginTop:10,flexWrap:'wrap'}},
         E('a',{style:lnk,href:'https://www.nps.gov/glac/planyourvisit/how-to-wilderness-permit.htm',target:'_blank'},'Wilderness permit info'),
         E('a',{style:lnk,href:'https://cdtcoalition.org/northern-terminus/',target:'_blank'},'Northern terminus info'),
-        E('a',{style:lnk,href:'https://www.nps.gov/glac/planyourvisit/upload/Wilderness-Campground-Map-2024_accessible.pdf',target:'_blank'},'Park campsites map')
+        E('a',{style:lnk,href:'https://www.nps.gov/glac/planyourvisit/upload/Wilderness-Campground-Map-2024_accessible.pdf',target:'_blank'},'Park campsites map'),
+        E('a',{style:lnk,href:'https://lookingglassbasecamp.org/list-your-gnp-permit/',target:'_blank'},'Looking Glass Basecamp permit share')
       )
     )
   );
@@ -471,7 +472,8 @@ function App(){
       ),
       page==='browse'&&E(Browse,{listings,loading,onClaim:handleClaim,onUnclaim:handleUnclaim,onInterest:handleInterest,onUninterest:handleUninterest,myClaims,myInterests}),
       page==='share'&&E(ShareForm,{onPost:handlePost}),
-      page==='about'&&E(About)
+      page==='about'&&E(About),
+      page==='faq'&&E(FAQ)
     ),
     E(StatsFooter,{stats:stats})
   );
@@ -493,6 +495,19 @@ function StatsFooter({stats}){
         );
       })
     )
+  );
+}
+
+function FAQ(){
+  const wrap={background:'#1a2a1a',border:'1px solid rgba(200,168,75,0.2)',borderRadius:12,padding:'1.5rem',maxWidth:660,margin:'0 auto'};
+  const q={fontSize:13,fontFamily:mono,letterSpacing:'.04em',fontWeight:500,color:gold,textTransform:'uppercase',marginBottom:'.75rem',lineHeight:1.6};
+  const a={fontSize:14,lineHeight:1.85,color:'#9ab88a',marginBottom:'1rem'};
+  const quote={fontSize:13.5,lineHeight:1.85,color:'#e8ede3',fontStyle:'italic',textAlign:'center',padding:'.6rem 1.4rem',margin:'.9rem 0'};
+  return E('div',{style:wrap},
+    E('p',{style:q},'How is this website different than Looking Glass Basecamp\'s permit listing feature?'),
+    E('p',{style:a},"We\'ve gone about solving the same problem in different ways. Per William\'s words, LGB\'s set up is:"),
+    E('p',{style:quote},'"person with a permit put[s] up their listing and anyone who wants to contact them about can send an email to an anonymous email address. From there it\'s up to the hikers to coordinate. The listing can then be taken down by the original poster when it\'s full or they don\'t want to deal with it anymore."'),
+    E('p',{style:a},"Versus this website acts like a piece of paper you left on a message board, you aren't meant to follow up on who shares the permit. This is likely a better fit for someone who is comfortable with meeting and camping with a CDT hiker they've never met or a NOBO hiker who can't be bothered to do anything extra outside of getting to Canada.")
   );
 }
 ReactDOM.createRoot(document.getElementById('root')).render(E(App));
